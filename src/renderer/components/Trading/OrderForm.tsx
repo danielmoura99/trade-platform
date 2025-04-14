@@ -1,4 +1,22 @@
+// caminho: src/renderer/components/Trading/OrderForm.tsx
 import React, { useState } from "react";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter,
+} from "../../../components/ui/card";
+import { Input } from "../../../components/ui/input";
+import { Button } from "../../../components/ui/button";
+import { Label } from "../../../components/ui/label";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../../../components/ui/tabs";
+import { Slider } from "../../../components/ui/slider";
+import { ArrowDownUp, Wallet, DollarSign, BarChart3 } from "lucide-react";
 
 interface OrderFormProps {
   symbol: string;
@@ -12,6 +30,11 @@ const OrderForm: React.FC<OrderFormProps> = ({ symbol }) => {
   const [orderMode, setOrderMode] = useState<OrderMode>("limit");
   const [price, setPrice] = useState<string>("36.22");
   const [quantity, setQuantity] = useState<string>("100");
+
+  // Dados mockados para exibição
+  const accountBalance = 10000;
+  const buyingPower = 25000;
+  const lastPrice = 36.22;
 
   const calculateTotal = (): number => {
     const priceValue = parseFloat(price) || 0;
@@ -31,159 +54,165 @@ const OrderForm: React.FC<OrderFormProps> = ({ symbol }) => {
     // Aqui iríamos chamar o serviço de envio de ordens
   };
 
+  // Calcular o percentual do saldo que seria usado na ordem
+  const totalPercentage = Math.min(
+    100,
+    (calculateTotal() / accountBalance) * 100
+  );
+
   return (
-    <div
-      style={{
-        backgroundColor: "#1E1E1E",
-        borderRadius: "4px",
-        padding: "15px",
-      }}
-    >
-      <h3 style={{ margin: "0 0 15px 0" }}>Nova Ordem - {symbol}</h3>
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ display: "flex", marginBottom: "15px" }}>
-          <button
-            type="button"
-            style={{
-              flex: 1,
-              padding: "8px",
-              border: "none",
-              borderRadius: "4px 0 0 4px",
-              backgroundColor: orderType === "buy" ? "#26A69A" : "#333",
-              color: "white",
-              cursor: "pointer",
-            }}
-            onClick={() => setOrderType("buy")}
-          >
-            Compra
-          </button>
-          <button
-            type="button"
-            style={{
-              flex: 1,
-              padding: "8px",
-              border: "none",
-              borderRadius: "0 4px 4px 0",
-              backgroundColor: orderType === "sell" ? "#EF5350" : "#333",
-              color: "white",
-              cursor: "pointer",
-            }}
-            onClick={() => setOrderType("sell")}
-          >
-            Venda
-          </button>
+    <Card className="bg-surface border-border shadow-md h-full">
+      <CardHeader className="pb-2 border-b border-border">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold flex items-center">
+            <ArrowDownUp className="mr-2 h-5 w-5" />
+            Nova Ordem
+          </h3>
+          <span className="text-lg font-bold">{symbol}</span>
         </div>
-
-        <div style={{ display: "flex", marginBottom: "15px" }}>
-          <button
-            type="button"
-            style={{
-              flex: 1,
-              padding: "8px",
-              border: "none",
-              borderRadius: "4px 0 0 4px",
-              backgroundColor: orderMode === "market" ? "#555" : "#333",
-              color: "white",
-              cursor: "pointer",
-            }}
-            onClick={() => setOrderMode("market")}
-          >
-            Mercado
-          </button>
-          <button
-            type="button"
-            style={{
-              flex: 1,
-              padding: "8px",
-              border: "none",
-              borderRadius: "0 4px 4px 0",
-              backgroundColor: orderMode === "limit" ? "#555" : "#333",
-              color: "white",
-              cursor: "pointer",
-            }}
-            onClick={() => setOrderMode("limit")}
-          >
-            Limite
-          </button>
+        <div className="grid grid-cols-2 gap-2 mt-1 text-sm text-muted-foreground">
+          <div className="flex items-center">
+            <Wallet className="h-4 w-4 mr-1" />
+            <span>Saldo: R$ {accountBalance.toLocaleString("pt-BR")}</span>
+          </div>
+          <div className="flex items-center justify-end">
+            <DollarSign className="h-4 w-4 mr-1" />
+            <span>Último: R$ {lastPrice.toFixed(2)}</span>
+          </div>
         </div>
+      </CardHeader>
+      <CardContent className="p-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Tabs
+            value={orderType}
+            onValueChange={(value) => setOrderType(value as OrderType)}
+            className="w-full"
+          >
+            <TabsList className="grid grid-cols-2 w-full h-10">
+              <TabsTrigger
+                value="buy"
+                className={`data-[state=active]:shadow-sm text-white ${
+                  orderType === "buy"
+                    ? "bg-primary hover:bg-primary/90 data-[state=active]:bg-primary"
+                    : "bg-surface hover:bg-surfaceHover"
+                }`}
+              >
+                Compra
+              </TabsTrigger>
+              <TabsTrigger
+                value="sell"
+                className={`data-[state=active]:shadow-sm text-white ${
+                  orderType === "sell"
+                    ? "bg-danger hover:bg-danger/90 data-[state=active]:bg-danger"
+                    : "bg-surface hover:bg-surfaceHover"
+                }`}
+              >
+                Venda
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        {orderMode === "limit" && (
-          <div style={{ marginBottom: "10px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>
-              Preço:
-            </label>
-            <input
+          <Tabs
+            value={orderMode}
+            onValueChange={(value) => setOrderMode(value as OrderMode)}
+            className="w-full"
+          >
+            <TabsList className="grid grid-cols-2 w-full h-9">
+              <TabsTrigger value="market">Mercado</TabsTrigger>
+              <TabsTrigger value="limit">Limite</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {orderMode === "limit" && (
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label htmlFor="price" className="text-sm">
+                  Preço:
+                </Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-1 text-xs hover:bg-surfaceHover"
+                    onClick={() => setPrice((Number(price) - 0.1).toFixed(2))}
+                  >
+                    -0.10
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-1 text-xs hover:bg-surfaceHover"
+                    onClick={() => setPrice((Number(price) + 0.1).toFixed(2))}
+                  >
+                    +0.10
+                  </Button>
+                </div>
+              </div>
+              <Input
+                id="price"
+                type="text"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="bg-surfaceHover border-border font-medium"
+              />
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="quantity" className="text-sm">
+              Quantidade:
+            </Label>
+            <Input
+              id="quantity"
               type="text"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "8px",
-                backgroundColor: "#2A2A2A",
-                border: "1px solid #444",
-                color: "white",
-                borderRadius: "4px",
-              }}
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              className="bg-surfaceHover border-border font-medium"
             />
           </div>
-        )}
 
-        <div style={{ marginBottom: "10px" }}>
-          <label style={{ display: "block", marginBottom: "5px" }}>
-            Quantidade:
-          </label>
-          <input
-            type="text"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "8px",
-              backgroundColor: "#2A2A2A",
-              border: "1px solid #444",
-              color: "white",
-              borderRadius: "4px",
-            }}
-          />
-        </div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Total:</span>
+              <span className="font-bold">
+                R${" "}
+                {calculateTotal().toLocaleString("pt-BR", {
+                  minimumFractionDigits: 2,
+                })}
+              </span>
+            </div>
 
-        <div style={{ marginBottom: "15px" }}>
-          <label style={{ display: "block", marginBottom: "5px" }}>
-            Total:
-          </label>
-          <div
-            style={{
-              padding: "8px",
-              backgroundColor: "#2A2A2A",
-              border: "1px solid #444",
-              borderRadius: "4px",
-            }}
-          >
-            R${" "}
-            {calculateTotal().toLocaleString("pt-BR", {
-              minimumFractionDigits: 2,
-            })}
+            <div className="w-full bg-surfaceHover h-1.5 rounded-full overflow-hidden">
+              <div
+                className={`h-full ${
+                  orderType === "buy" ? "bg-primary" : "bg-danger"
+                }`}
+                style={{ width: `${totalPercentage}%` }}
+              ></div>
+            </div>
+
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>0%</span>
+              <span>{totalPercentage.toFixed(0)}% do saldo</span>
+              <span>100%</span>
+            </div>
           </div>
-        </div>
 
-        <button
-          type="submit"
-          style={{
-            width: "100%",
-            padding: "10px",
-            border: "none",
-            borderRadius: "4px",
-            backgroundColor: orderType === "buy" ? "#26A69A" : "#EF5350",
-            color: "white",
-            fontWeight: "bold",
-            cursor: "pointer",
-          }}
-        >
-          {orderType === "buy" ? "Comprar" : "Vender"} {symbol}
-        </button>
-      </form>
-    </div>
+          <Button
+            type="submit"
+            className={`w-full font-bold ${
+              orderType === "buy"
+                ? "bg-primary hover:bg-primary/90"
+                : "bg-danger hover:bg-danger/90"
+            }`}
+          >
+            {orderType === "buy" ? "Comprar" : "Vender"} {symbol}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 

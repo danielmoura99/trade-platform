@@ -15,6 +15,7 @@ const commonConfig = {
       "@main": path.resolve(__dirname, "src/main"),
       "@renderer": path.resolve(__dirname, "src/renderer"),
       "@shared": path.resolve(__dirname, "src/shared"),
+      "@/lib": path.resolve(__dirname, "src/renderer/lib"),
     },
   },
   devtool: "source-map",
@@ -33,7 +34,7 @@ const commonConfig = {
       },
       {
         test: /\.css$/,
-        use: ["style-loader", "css-loader"],
+        use: ["style-loader", "css-loader", "postcss-loader"],
       },
     ],
   },

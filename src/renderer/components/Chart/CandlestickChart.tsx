@@ -1,10 +1,15 @@
+// caminho: src/renderer/components/Chart/CandlestickChart.tsx
 import React, { useEffect, useRef, useState } from "react";
 import {
   createChart,
   CrosshairMode,
   IChartApi,
   ISeriesApi,
+  LineStyle,
 } from "lightweight-charts";
+import { Card, CardHeader, CardContent } from "../../../components/ui/card";
+import { Badge } from "../../../components/ui/badge";
+import { Loader2 } from "lucide-react";
 
 interface ChartComponentProps {
   symbol: string;
@@ -35,33 +40,19 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
   const [candleSeries, setCandleSeries] =
     useState<ISeriesApi<"Candlestick"> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-
-  // Configurações de cores baseadas no modo escuro/claro
-  const chartOptions = {
-    width,
-    height,
-    layout: {
-      backgroundColor: darkMode ? "#1E1E1E" : "#FFFFFF",
-      textColor: darkMode ? "#D9D9D9" : "#191919",
-    },
-    grid: {
-      vertLines: {
-        color: darkMode ? "#2B2B43" : "#E6E6E6",
-      },
-      horzLines: {
-        color: darkMode ? "#2B2B43" : "#E6E6E6",
-      },
-    },
-    crosshair: {
-      mode: CrosshairMode.Normal,
-    },
-    timeScale: {
-      borderColor: darkMode ? "#545454" : "#C8C8C8",
-    },
-    rightPriceScale: {
-      borderColor: darkMode ? "#545454" : "#C8C8C8",
-    },
-  };
+  const [priceInfo, setPriceInfo] = useState<{
+    last: number;
+    open: number;
+    high: number;
+    low: number;
+    change: number;
+  }>({
+    last: 0,
+    open: 0,
+    high: 0,
+    low: 0,
+    change: 0,
+  });
 
   // Inicialização do gráfico
   useEffect(() => {
@@ -71,8 +62,57 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
         chart.remove();
       }
 
-      // Cria novo gráfico
-      const newChart = createChart(chartContainerRef.current, chartOptions);
+      // Cria novo gráfico com opções corretamente tipadas
+      const newChart = createChart(chartContainerRef.current, {
+        width,
+        height,
+        layout: {
+          backgroundColor: darkMode ? "#1E1E1E" : "#FFFFFF",
+          textColor: darkMode ? "#D9D9D9" : "#191919",
+          fontFamily:
+            "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif",
+        },
+        grid: {
+          vertLines: {
+            color: darkMode ? "#2B2B43" : "#E6E6E6",
+            style: LineStyle.Solid,
+            visible: true,
+          },
+          horzLines: {
+            color: darkMode ? "#2B2B43" : "#E6E6E6",
+            style: LineStyle.Solid,
+            visible: true,
+          },
+        },
+        crosshair: {
+          mode: CrosshairMode.Normal,
+          // Simplificando as propriedades de crosshair para evitar problemas de tipo
+          vertLine: {
+            color: darkMode ? "#6A6A6A" : "#9B9B9B",
+            style: LineStyle.Solid,
+            labelBackgroundColor: darkMode ? "#2A2A2A" : "#FFFFFF",
+          },
+          horzLine: {
+            color: darkMode ? "#6A6A6A" : "#9B9B9B",
+            style: LineStyle.Solid,
+            labelBackgroundColor: darkMode ? "#2A2A2A" : "#FFFFFF",
+          },
+        },
+        timeScale: {
+          borderColor: darkMode ? "#545454" : "#C8C8C8",
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        rightPriceScale: {
+          borderColor: darkMode ? "#545454" : "#C8C8C8",
+          scaleMargins: {
+            top: 0.1,
+            bottom: 0.2,
+          },
+        },
+        handleScroll: true,
+        handleScale: true,
+      });
 
       // Adiciona série de candles
       const newCandleSeries = newChart.addCandlestickSeries({
@@ -89,13 +129,17 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
       // Função para lidar com redimensionamento
       const handleResize = () => {
         if (chartContainerRef.current) {
-          const { clientWidth } = chartContainerRef.current;
-          newChart.applyOptions({ width: clientWidth });
+          const { clientWidth, clientHeight } = chartContainerRef.current;
+          newChart.applyOptions({
+            width: clientWidth,
+            height: clientHeight - 20, // Compensar pelo padding
+          });
         }
       };
 
       // Adiciona listener de resize
       window.addEventListener("resize", handleResize);
+      handleResize(); // Aplica tamanho inicial
 
       // Cleanup
       return () => {
@@ -103,7 +147,7 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
         newChart.remove();
       };
     }
-  }, [darkMode]);
+  }, [darkMode, height, width]);
 
   // Carrega dados de exemplo (em produção, seria da API)
   useEffect(() => {
@@ -115,6 +159,25 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
       setTimeout(() => {
         const data: CandleData[] = generateSampleData();
         candleSeries.setData(data);
+
+        // Atualizar informações de preço
+        if (data.length > 0) {
+          const lastCandle = data[data.length - 1];
+          const firstCandle = data[0];
+          const highestPrice = Math.max(...data.map((d) => d.high));
+          const lowestPrice = Math.min(...data.map((d) => d.low));
+          const priceChange =
+            ((lastCandle.close - firstCandle.open) / firstCandle.open) * 100;
+
+          setPriceInfo({
+            last: lastCandle.close,
+            open: firstCandle.open,
+            high: highestPrice,
+            low: lowestPrice,
+            change: priceChange,
+          });
+        }
+
         setIsLoading(false);
       }, 500);
     }
@@ -156,51 +219,70 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
   };
 
   return (
-    <div
-      className="chart-container"
-      style={{
-        position: "relative",
-        borderRadius: "4px",
-        overflow: "hidden",
-        backgroundColor: darkMode ? "#1E1E1E" : "#FFFFFF",
-      }}
-    >
-      <div
-        className="chart-header"
-        style={{
-          padding: "10px",
-          fontWeight: "bold",
-          color: darkMode ? "#D9D9D9" : "#191919",
-          borderBottom: `1px solid ${darkMode ? "#2B2B43" : "#E6E6E6"}`,
-        }}
-      >
-        <h3>
-          {symbol} - {interval}
-        </h3>
-      </div>
-      <div ref={chartContainerRef} />
-      {isLoading && (
-        <div
-          className="loading-overlay"
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: darkMode
-              ? "rgba(30, 30, 30, 0.8)"
-              : "rgba(255, 255, 255, 0.8)",
-            color: darkMode ? "#D9D9D9" : "#191919",
-          }}
-        >
-          <span>Carregando dados...</span>
+    <Card className="h-full bg-surface border-border overflow-hidden">
+      <CardHeader className="p-3 border-b border-border flex flex-row items-center justify-between space-y-0">
+        <div className="flex items-center gap-2">
+          <h3 className="font-bold">{symbol}</h3>
+          <Badge variant="outline" className="text-xs font-normal">
+            {interval}
+          </Badge>
         </div>
-      )}
-    </div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-sm">
+            <span className="text-muted-foreground mr-1">Último:</span>
+            <span className="font-semibold">{priceInfo.last.toFixed(2)}</span>
+          </div>
+
+          <div className="text-sm">
+            <span
+              className={`font-semibold ${
+                priceInfo.change >= 0 ? "text-primary" : "text-danger"
+              }`}
+            >
+              {priceInfo.change >= 0 ? "+" : ""}
+              {priceInfo.change.toFixed(2)}%
+            </span>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-0 relative h-[calc(100%-48px)]">
+        <div className="w-full h-full" ref={chartContainerRef} />
+
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-10">
+            <div className="flex flex-col items-center">
+              <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
+              <span>Carregando dados...</span>
+            </div>
+          </div>
+        )}
+
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 text-xs bg-surface/80 backdrop-blur-sm p-2 rounded border border-border">
+          <div className="grid grid-cols-2 gap-x-3">
+            <span className="text-muted-foreground">Abertura:</span>
+            <span className="font-medium">{priceInfo.open.toFixed(2)}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-3">
+            <span className="text-muted-foreground">Máxima:</span>
+            <span className="font-medium text-primary">
+              {priceInfo.high.toFixed(2)}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-3">
+            <span className="text-muted-foreground">Mínima:</span>
+            <span className="font-medium text-danger">
+              {priceInfo.low.toFixed(2)}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-3">
+            <span className="text-muted-foreground">Último:</span>
+            <span className="font-medium">{priceInfo.last.toFixed(2)}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

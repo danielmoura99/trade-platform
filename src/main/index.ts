@@ -1,3 +1,4 @@
+// caminho: src/main/index.ts
 import { app, BrowserWindow } from "electron";
 import path from "path";
 
@@ -15,6 +16,20 @@ const createWindow = (): void => {
       nodeIntegration: true,
       contextIsolation: false,
     },
+    // Adicionando estas propriedades para abrir maximizado com boa aparência
+    show: false, // Não mostrar até estar pronto
+    minWidth: 800, // Largura mínima
+    minHeight: 600, // Altura mínima
+  });
+
+  // Maximizar antes de mostrar
+  mainWindow.maximize();
+
+  // Mostrar janela apenas quando estiver pronta
+  mainWindow.once("ready-to-show", () => {
+    if (mainWindow) {
+      mainWindow.show();
+    }
   });
 
   // Carrega o arquivo HTML principal
