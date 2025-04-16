@@ -47,6 +47,7 @@ const createWindow = (): void => {
   mainWindow.once("ready-to-show", () => {
     if (mainWindow) {
       mainWindow.show();
+      mainWindow.webContents.openDevTools();
     }
   });
 

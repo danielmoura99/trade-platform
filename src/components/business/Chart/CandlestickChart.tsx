@@ -1,4 +1,4 @@
-// caminho: src/renderer/components/Chart/CandlestickChart.tsx
+// src/components/business/Chart/CandlestickChart.tsx
 import React, { useEffect, useRef, useState } from "react";
 import {
   createChart,
@@ -7,9 +7,11 @@ import {
   ISeriesApi,
   LineStyle,
 } from "lightweight-charts";
-import { Card, CardHeader, CardContent } from "../../../components/ui/card";
-import { Badge } from "../../../components/ui/badge";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
+import { useMarketStore } from "@/stores/marketStore";
+import { marketService } from "@/services";
 
 interface ChartComponentProps {
   symbol: string;
@@ -40,6 +42,15 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
   const [candleSeries, setCandleSeries] =
     useState<ISeriesApi<"Candlestick"> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Obter dados do market store
+  const marketData = useMarketStore((state) => state.marketData);
+  const setMarketData = useMarketStore((state) => state.setMarketData);
+
+  // Dados do símbolo específico
+  const symbolData = marketData[symbol] || null;
+
+  // Estado local para informações do preço
   const [priceInfo, setPriceInfo] = useState<{
     last: number;
     open: number;
@@ -47,11 +58,11 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
     low: number;
     change: number;
   }>({
-    last: 0,
-    open: 0,
-    high: 0,
-    low: 0,
-    change: 0,
+    last: symbolData?.lastPrice || 0,
+    open: symbolData?.open || 0,
+    high: symbolData?.high || 0,
+    low: symbolData?.low || 0,
+    change: symbolData?.changePercent || 0,
   });
 
   // Inicialização do gráfico
@@ -86,7 +97,6 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
         },
         crosshair: {
           mode: CrosshairMode.Normal,
-          // Simplificando as propriedades de crosshair para evitar problemas de tipo
           vertLine: {
             color: darkMode ? "#6A6A6A" : "#9B9B9B",
             style: LineStyle.Solid,
@@ -149,23 +159,34 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
     }
   }, [darkMode, height, width]);
 
-  // Carrega dados de exemplo (em produção, seria da API)
+  // Carregar dados quando o símbolo ou intervalo mudar
   useEffect(() => {
-    if (candleSeries) {
-      // Simulação de dados
-      setIsLoading(true);
+    if (!symbol) return;
 
-      // Em produção, isso seria substituído por uma chamada real à API
-      setTimeout(() => {
-        const data: CandleData[] = generateSampleData();
-        candleSeries.setData(data);
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        // Verificar se já temos dados deste símbolo
+        if (!symbolData) {
+          // Buscar dados básicos do símbolo
+          const data = await marketService.getSymbolData(symbol);
+          setMarketData(symbol, data);
+        }
+
+        // Buscar e renderizar dados históricos (candles)
+        // Por enquanto, usamos dados simulados
+        const candleData = generateSampleData();
+
+        if (candleSeries) {
+          candleSeries.setData(candleData);
+        }
 
         // Atualizar informações de preço
-        if (data.length > 0) {
-          const lastCandle = data[data.length - 1];
-          const firstCandle = data[0];
-          const highestPrice = Math.max(...data.map((d) => d.high));
-          const lowestPrice = Math.min(...data.map((d) => d.low));
+        if (candleData.length > 0) {
+          const lastCandle = candleData[candleData.length - 1];
+          const firstCandle = candleData[0];
+          const highestPrice = Math.max(...candleData.map((d) => d.high));
+          const lowestPrice = Math.min(...candleData.map((d) => d.low));
           const priceChange =
             ((lastCandle.close - firstCandle.open) / firstCandle.open) * 100;
 
@@ -177,20 +198,41 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
             change: priceChange,
           });
         }
-
+      } catch (error) {
+        console.error("Erro ao carregar dados do gráfico:", error);
+      } finally {
         setIsLoading(false);
-      }, 500);
-    }
-  }, [candleSeries, symbol, interval]);
+      }
+    };
 
-  // Função para gerar dados de amostra
+    fetchData();
+
+    // Assinar para atualizações em tempo real
+    const ws = marketService.setupWebSocket();
+    const unsubscribe = ws.subscribe(symbol, (update) => {
+      // Atualizar último preço quando tiver novas cotações
+      if (update.lastPrice) {
+        setPriceInfo((prev) => ({
+          ...prev,
+          last: update.lastPrice,
+          change: update.changePercent || prev.change,
+        }));
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [symbol, interval, candleSeries, symbolData, setMarketData]);
+
+  // Função para gerar dados de amostra (será substituída por dados reais)
   const generateSampleData = (): CandleData[] => {
     const data: CandleData[] = [];
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
-    let basePrice = 100;
-    const volatility = 2;
+    let basePrice = symbolData?.lastPrice || 100; // Usar preço atual se disponível
+    const volatility = basePrice * 0.02; // 2% de volatilidade
 
     for (let i = 0; i < 100; i++) {
       const time = new Date(now);
@@ -203,7 +245,6 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
         (open + high + low) / 3 + (Math.random() - 0.5) * volatility;
 
       data.push({
-        // Formato de data compatível com a versão 3.8.0
         time: time.toISOString().split("T")[0],
         open,
         high,
@@ -222,7 +263,7 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
     <Card className="h-full bg-surface border-border overflow-hidden">
       <CardHeader className="p-3 border-b border-border flex flex-row items-center justify-between space-y-0">
         <div className="flex items-center gap-2">
-          <h3 className="font-bold">{symbol}</h3>
+          <h3 className="font-bold">{symbol.replace(".SA", "")}</h3>
           <Badge variant="outline" className="text-xs font-normal">
             {interval}
           </Badge>
@@ -231,17 +272,21 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
         <div className="flex items-center gap-3">
           <div className="text-sm">
             <span className="text-muted-foreground mr-1">Último:</span>
-            <span className="font-semibold">{priceInfo.last.toFixed(2)}</span>
+            <span className="font-semibold">
+              {(symbolData?.lastPrice || priceInfo.last).toFixed(2)}
+            </span>
           </div>
 
           <div className="text-sm">
             <span
               className={`font-semibold ${
-                priceInfo.change >= 0 ? "text-primary" : "text-danger"
+                (symbolData?.changePercent || priceInfo.change) >= 0
+                  ? "text-primary"
+                  : "text-danger"
               }`}
             >
-              {priceInfo.change >= 0 ? "+" : ""}
-              {priceInfo.change.toFixed(2)}%
+              {(symbolData?.changePercent || priceInfo.change) >= 0 ? "+" : ""}
+              {(symbolData?.changePercent || priceInfo.change).toFixed(2)}%
             </span>
           </div>
         </div>
@@ -278,7 +323,9 @@ const CandlestickChart: React.FC<ChartComponentProps> = ({
           </div>
           <div className="grid grid-cols-2 gap-x-3">
             <span className="text-muted-foreground">Último:</span>
-            <span className="font-medium">{priceInfo.last.toFixed(2)}</span>
+            <span className="font-medium">
+              {(symbolData?.lastPrice || priceInfo.last).toFixed(2)}
+            </span>
           </div>
         </div>
       </CardContent>

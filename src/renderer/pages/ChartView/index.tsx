@@ -1,7 +1,7 @@
 // caminho: src/renderer/pages/ChartView/index.tsx
 import React, { useState } from "react";
-import CandlestickChart from "../../components/Chart/CandlestickChart";
-import OrderForm from "../../components/Trading/OrderForm";
+
+import OrderForm from "../../../components/business/Trading/OrderForm";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Card, CardContent } from "../../../components/ui/card";
@@ -29,6 +29,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../../components/ui/dropdown-menu";
+import CandlestickChart from "@/components/business/Chart/CandlestickChart";
 
 const ChartView: React.FC = () => {
   const [symbol, setSymbol] = useState("PETR4");

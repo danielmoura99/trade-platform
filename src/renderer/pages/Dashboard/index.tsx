@@ -1,6 +1,6 @@
 // caminho: src/renderer/pages/Dashboard/index.tsx
 import React from "react";
-import WatchlistWidget from "../../components/Trading/WatchlistWidget";
+import WatchlistWidget from "../../../components/business/Trading/WatchlistWidget";
 import PositionSummary from "./components/PositionSummary";
 import { Card, CardContent, CardHeader } from "../../../components/ui/card";
 import {

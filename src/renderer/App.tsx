@@ -10,6 +10,7 @@ import { LayoutDashboard, LineChart, Settings, User } from "lucide-react";
 type Page = "dashboard" | "chart" | "settings";
 
 const App: React.FC = () => {
+  console.log("Componente App iniciando...");
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
 
   // Função para renderizar a página atual
