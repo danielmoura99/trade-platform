@@ -2,6 +2,24 @@
 import { app, BrowserWindow } from "electron";
 import path from "path";
 
+// Adicionar electron-reloader para desenvolvimento
+if (process.env.NODE_ENV === "development") {
+  try {
+    // Evitar erro TypeScript com electron-reloader
+    const electronReloader = require("electron-reloader");
+
+    // @ts-ignore - Usamos ts-ignore porque o módulo não tem tipos TypeScript
+    electronReloader(module, {
+      watchRenderer: true,
+      ignore: ["node_modules"],
+    });
+
+    console.log("Electron Reloader ativado");
+  } catch (err) {
+    console.log("Erro ao configurar electron-reloader:", err);
+  }
+}
+
 // Referência global para evitar que a janela seja fechada automaticamente pelo GC
 let mainWindow: BrowserWindow | null = null;
 

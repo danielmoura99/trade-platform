@@ -32,7 +32,7 @@ const App: React.FC = () => {
       <header className="flex items-center justify-between px-4 lg:px-6 h-14 bg-surface border-b border-border shadow-sm">
         <div className="flex items-center">
           <div className="text-lg font-bold mr-2 lg:mr-8 hidden sm:block">
-            Trading Platform
+            Trading Platform2
           </div>
           <div className="text-lg font-bold sm:hidden">TP</div>
 

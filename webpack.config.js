@@ -62,6 +62,18 @@ const rendererConfig = {
       filename: "renderer.html", // Nome do arquivo de saída
     }),
   ],
+  // Configurações para o servidor de desenvolvimento
+  devServer: {
+    static: {
+      directory: path.join(__dirname, "dist"),
+    },
+    hot: true, // Habilitar Hot Module Replacement
+    liveReload: true, // Recarregar a página em caso de alterações
+    watchFiles: ["src/**/*"], // Arquivos a serem observados para alterações
+    compress: true, // Comprimir
+    port: 9000, // Porta especificada no seu script npm run dev
+    historyApiFallback: true,
+  },
 };
 
 module.exports = [mainConfig, rendererConfig];
